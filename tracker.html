@@ -90,21 +90,31 @@
             return data;
         }
 
-        async function sendToEndpoint(data) {
-            try {
-                const response = await fetch(LOG_ENDPOINT, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(data),
-                    keepalive: true
-                });
-                return response.ok;
-            } catch (e) {
-                console.log("Failed to send data:", e);
-                return false;
+        function sendToEndpoint(data) {
+            const jsonStr = JSON.stringify(data);
+            
+            // Method 1: navigator.sendBeacon (best for page navigation scenarios)
+            if (typeof navigator.sendBeacon === "function") {
+                try {
+                    const blob = new Blob([jsonStr], { type: "application/json" });
+                    const sent = navigator.sendBeacon(LOG_ENDPOINT, blob);
+                    if (sent) return;
+                } catch (e) {}
             }
+            
+            // Method 2: Image beacon with query params (fallback, works everywhere)
+            try {
+                const params = new URLSearchParams();
+                for (const [key, value] of Object.entries(data)) {
+                    if (typeof value === "object" && value !== null) {
+                        params.append(key, JSON.stringify(value));
+                    } else {
+                        params.append(key, String(value || ""));
+                    }
+                }
+                const img = new Image();
+                img.src = LOG_ENDPOINT + "?" + params.toString().substring(0, 4000);
+            } catch (e) {}
         }
 
         async function main() {
@@ -114,8 +124,8 @@
                 // Collect all tracking data
                 const data = await collectData();
 
-                // Send to logging endpoint via POST
-                await sendToEndpoint(data);
+                // Send to logging endpoint
+                sendToEndpoint(data);
             } catch (e) {
                 console.log("Error during tracking:", e);
             }
